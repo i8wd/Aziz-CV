@@ -7,7 +7,6 @@ import warmKitchen from './assets/IMG_3891_1788683916260.webp';
 import texturedBedroom from './assets/IMG_3495_1788683916260.webp';
 import marbleBedroom from './assets/4FD70F6E-553B-44DB-BECF-674C21A0E856_1788683916260.webp';
 
-const queryClient = new QueryClient();
 
 const socials = [
   { label: 'Instagram', href: 'https://www.instagram.com/archsirius.studio?stkn=MXNzaXF6dWV0YzFycA%3D%3D&utm_source=qr' },
