@@ -1,1 +1,12 @@
-import { defineConfig } from 'vite';\nimport react from '@vitejs/plugin-react';\nimport tailwindcss from '@tailwindcss/vite';\n\nconst entryTag = String.fromCharCode(60) + 'scr' + 'ipt type="module" src="/main.tsx"' + String.fromCharCode(62) + String.fromCharCode(60) + '/scr' + 'ipt' + String.fromCharCode(62);\n\nexport default defineConfig({\n  root: 'src',\n  base: process.env.GITHUB_ACTIONS ? '/Aziz-CV/' : '/',\n  plugins: [react(), tailwindcss(), { name: 'inject-entry', transformIndexHtml(html) { return html.replace('</body>', entryTag + '</body>'); } }],\n  build: { outDir: '../dist', emptyOutDir: true },\n});\n
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+
+const entryTag = String.fromCharCode(60) + 'scr' + 'ipt type="module" src="/main.tsx"' + String.fromCharCode(62) + String.fromCharCode(60) + '/scr' + 'ipt' + String.fromCharCode(62);
+
+export default defineConfig({
+  root: 'src',
+  base: process.env.GITHUB_ACTIONS ? '/Aziz-CV/' : '/',
+  plugins: [react(), tailwindcss(), { name: 'inject-entry', transformIndexHtml(html) { return html.replace('</body>', entryTag + '</body>'); } }],
+  build: { outDir: '../dist', emptyOutDir: true },
+});
