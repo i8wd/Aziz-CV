@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDownRight, ArrowUpRight, Menu, X } from 'lucide-react';
+import archsiriusLogo from './assets/archsirius-logo.png';
+import profileImage from './assets/aziz-jalilov.jpeg';
 import heroImage from './assets/IMG_4143_1788683916260.webp';
 import exteriorDetail from './assets/IMG_4139_1788683916260.webp';
 import sereneBedroom from './assets/IMG_3892_1788683916260.webp';
@@ -7,6 +9,7 @@ import warmKitchen from './assets/IMG_3891_1788683916260.webp';
 import texturedBedroom from './assets/IMG_3495_1788683916260.webp';
 import marbleBedroom from './assets/4FD70F6E-553B-44DB-BECF-674C21A0E856_1788683916260.webp';
 
+const queryClient = new QueryClient();
 
 const socials = [
   { label: 'Instagram', href: 'https://www.instagram.com/archsirius.studio?stkn=MXNzaXF6dWV0YzFycA%3D%3D&utm_source=qr' },
@@ -68,14 +71,21 @@ const projects = [
 function useRevealObserver() {
   useEffect(() => {
     const items = document.querySelectorAll<HTMLElement>('.reveal');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (reducedMotion) {
+      items.forEach((item) => item.classList.add('is-visible'));
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible');
+          requestAnimationFrame(() => entry.target.classList.add('is-visible'));
           observer.unobserve(entry.target);
         }
       }),
-      { threshold: 0.12 },
+      { threshold: 0.08, rootMargin: '0px 0px -8% 0px' },
     );
     items.forEach((item) => observer.observe(item));
     return () => observer.disconnect();
@@ -86,54 +96,99 @@ function ScrollProgress() {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const onScroll = () => {
+    let frame = 0;
+    const update = () => {
+      frame = 0;
       const max = document.documentElement.scrollHeight - window.innerHeight;
-      setProgress(max > 0 ? (window.scrollY / max) * 100 : 0);
+      setProgress(max > 0 ? Math.min(window.scrollY / max, 1) : 0);
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
   }, []);
 
-  return <div className="fixed left-0 top-0 z-[60] h-[2px] bg-[hsl(var(--accent))] transition-[width] duration-150" style={{ width: `${progress}%` }} aria-hidden="true" />;
+  return (
+    <div className="scroll-progress" aria-hidden="true">
+      <span className="scroll-progress__bar" style={{ transform: `scaleX(${progress})` }} />
+    </div>
+  );
 }
 
 function Mark() {
   return (
-    <span className="flex items-center gap-2" aria-label="ArchSirius Studio">
-      <span className="flex h-7 w-7 items-center justify-center border border-current font-mono-ui text-[10px] tracking-[-.08em]">AS</span>
-      <span className="font-mono-ui text-[10px] uppercase tracking-[.2em]">ArchSirius</span>
+    <span className="site-brand" aria-label="ArchSirius Studio">
+      <span className="site-brand__logo">
+        <img src={archsiriusLogo} alt="" />
+      </span>
+      <span className="site-brand__name font-mono-ui">archsirius</span>
     </span>
   );
 }
 
 function Header({ menuOpen, setMenuOpen }: { menuOpen: boolean; setMenuOpen: (value: boolean) => void }) {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
+  const previousScroll = useRef(0);
   const links = [
     { label: 'Selected work', href: '#work' },
     { label: 'Studio', href: '#studio' },
     { label: 'Contact', href: '#contact' },
   ];
 
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const currentScroll = window.scrollY;
+      const scrollingDown = currentScroll > previousScroll.current + 6;
+      const scrollingUp = currentScroll < previousScroll.current - 6;
+      setIsScrolled(currentScroll > 24);
+      if (currentScroll < 24 || scrollingUp) setIsHidden(false);
+      if (scrollingDown && currentScroll > 120 && !menuOpen) setIsHidden(true);
+      previousScroll.current = currentScroll;
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [menuOpen]);
+
   return (
-    <header className="absolute left-0 right-0 top-0 z-40 px-5 py-5 text-[#f0eadf] md:px-10 md:py-8">
-      <div className="mx-auto flex max-w-[1440px] items-center justify-between">
+    <header className={`site-header ${isScrolled ? 'is-scrolled' : ''} ${isHidden ? 'is-hidden' : ''} px-5 py-5 text-[#f0eadf] md:px-10 md:py-8`}>
+      <div className="site-header__inner mx-auto max-w-[1440px]">
         <a href="#top" className="line-link" data-testid="link-home"><Mark /></a>
-        <nav className="hidden items-center gap-8 md:flex" aria-label="Primary navigation">
-          {links.map((link) => <a key={link.href} href={link.href} className="line-link font-mono-ui text-[10px] uppercase tracking-[.16em] text-[#d7d0c4] transition-colors hover:text-[#f0eadf]" data-testid={`link-nav-${link.label.toLowerCase().replaceAll(' ', '-')}`}>{link.label}</a>)}
+        <nav className="site-header__nav hidden items-center gap-8 md:flex" aria-label="Primary navigation">
+          {links.map((link) => <a key={link.href} href={link.href} className="line-link header-nav-link font-mono-ui text-[10px] uppercase tracking-[.16em] text-[#d7d0c4]" data-testid={`link-nav-${link.label.toLowerCase().replaceAll(' ', '-')}`}>{link.label}</a>)}
         </nav>
-        <button
-          type="button"
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="flex items-center gap-3 font-mono-ui text-[10px] uppercase tracking-[.16em] md:hidden"
-          aria-expanded={menuOpen}
-          aria-controls="mobile-nav"
-          data-testid="button-toggle-menu"
-        >
-          {menuOpen ? 'Close' : 'Menu'} {menuOpen ? <X size={16} strokeWidth={1.2} /> : <Menu size={16} strokeWidth={1.2} />}
-        </button>
+        <div className="site-header__actions">
+          <div className="header-profile">
+            <img src={profileImage} alt="Aziz Jalilov" />
+            <span className="font-mono-ui">Aziz Jalilov</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="site-menu-button font-mono-ui md:hidden"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav"
+            data-testid="button-toggle-menu"
+          >
+            {menuOpen ? 'Close' : 'Menu'} {menuOpen ? <X size={16} strokeWidth={1.2} /> : <Menu size={16} strokeWidth={1.2} />}
+          </button>
+        </div>
       </div>
       {menuOpen && (
-        <nav id="mobile-nav" className="absolute left-0 right-0 top-full border-y border-[#f0eadf]/20 bg-[#25211c]/95 px-5 py-8 backdrop-blur-md md:hidden" aria-label="Mobile navigation">
+        <nav id="mobile-nav" className="site-header__mobile-nav absolute left-0 right-0 top-full border-y border-[#f0eadf]/20 bg-[#25211c]/95 px-5 py-8 backdrop-blur-md md:hidden" aria-label="Mobile navigation">
           <div className="flex flex-col gap-5">
             {links.map((link, index) => <a key={link.href} href={link.href} onClick={() => setMenuOpen(false)} className="font-display text-4xl text-[#f0eadf]" data-testid={`link-mobile-${index}`}>{link.label}</a>)}
           </div>
@@ -155,7 +210,7 @@ function Hero() {
 
   return (
     <section id="top" ref={heroRef} className="relative isolate flex min-h-[100svh] items-end overflow-hidden bg-[#25211c] text-[#f0eadf]" data-testid="section-hero">
-      <div className="absolute inset-0 -z-10" style={{ transform: 'translateY(var(--hero-shift, 0px)) scale(1.04)' }}>
+      <div className="hero-media absolute inset-0 -z-10" style={{ transform: 'translate3d(0, var(--hero-shift, 0px), 0) scale(1.04)' }}>
         <img src={heroImage} alt="Residential courtyard framed by modern buildings and palm trees" className="h-full w-full object-cover object-center opacity-70" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#25211c] via-[#25211c]/40 to-[#25211c]/10" />
         <div className="absolute inset-0 bg-[#15130f]/20" />
@@ -291,11 +346,25 @@ function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   useRevealObserver();
   useEffect(() => {
+    const onAnchorClick = (event: MouseEvent) => {
+      const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#"]');
+      if (!anchor?.hash) return;
+      const target = document.querySelector(anchor.hash);
+      if (!target) return;
+      event.preventDefault();
+      target.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'start',
+      });
+      window.history.replaceState(null, '', anchor.hash);
+    };
+    document.addEventListener('click', onAnchorClick);
     document.title = 'Aziz — ArchSirius Studio';
     const description = document.querySelector('meta[name="description"]') ?? document.createElement('meta');
     description.setAttribute('name', 'description');
     description.setAttribute('content', 'Aziz / ArchSirius Studio — architectural and interior visualization studies shaped by light, material, and atmosphere.');
     document.head.appendChild(description);
+    return () => document.removeEventListener('click', onAnchorClick);
   }, []);
   return (
     <div className="site-grain min-h-screen">
